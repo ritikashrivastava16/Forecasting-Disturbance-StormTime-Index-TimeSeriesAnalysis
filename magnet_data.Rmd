@@ -1,0 +1,771 @@
+---
+title: "final_project"
+output: html_document
+date: "2024-04-16"
+---
+
+```{r}
+library(tidyr)
+library(tseries)
+library(ggplot2)
+library(forecast)
+library(lmtest)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data <- read.csv("magnet_dataset.csv")
+data
+```
+
+```{r}
+for(i in 1:ncol(data)){
+  data[is.na(data[,i]), i] <- mean(data[,i], na.rm = TRUE)
+}
+```
+
+```{r}
+data
+```
+
+```{r}
+data <- subset(data, period == 'train_c')
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+dst <- data$dst
+bx_gse <- data$bx_gse
+by_gse <- data$by_gse
+bz_gse <- data$bz_gse
+theta_gse <- data$theta_gse
+phi_gse <- data$phi_gse
+bx_gsm <- data$bx_gsm
+by_gsm <- data$by_gsm
+bz_gsm <- data$bz_gsm
+theta_gsm <- data$theta_gsm
+phi_gsm <- data$phi_gsm
+bt <- data$bt
+density <- data$density
+speed <- data$speed
+temperature <- data$temperature
+```
+
+```{r}
+# Define the length of your time series data
+N <- length(dst)
+
+# Subtract mean and convert to time series for each variable
+dst <- dst - mean(dst)
+dst <- ts(dst, start = 1, end = N)
+
+bx_gse <- bx_gse - mean(bx_gse)
+bx_gse <- ts(bx_gse, start = 1, end = N)
+
+by_gse <- by_gse - mean(by_gse)
+by_gse <- ts(by_gse, start = 1, end = N)
+
+bz_gse <- bz_gse - mean(bz_gse)
+bz_gse <- ts(bz_gse, start = 1, end = N)
+
+theta_gse <- theta_gse - mean(theta_gse)
+theta_gse <- ts(theta_gse, start = 1, end = N)
+
+phi_gse <- phi_gse - mean(phi_gse)
+phi_gse <- ts(phi_gse, start = 1, end = N)
+
+bx_gsm <- bx_gsm - mean(bx_gsm)
+bx_gsm <- ts(bx_gsm, start = 1, end = N)
+
+by_gsm <- by_gsm - mean(by_gsm)
+by_gsm <- ts(by_gsm, start = 1, end = N)
+
+bz_gsm <- bz_gsm - mean(bz_gsm)
+bz_gsm <- ts(bz_gsm, start = 1, end = N)
+
+theta_gsm <- theta_gsm - mean(theta_gsm)
+theta_gsm <- ts(theta_gsm, start = 1, end = N)
+
+phi_gsm <- phi_gsm - mean(phi_gsm)
+phi_gsm <- ts(phi_gsm, start = 1, end = N)
+
+bt <- bt - mean(bt)
+bt <- ts(bt, start = 1, end = N)
+
+density <- density - mean(density)
+density <- ts(density, start = 1, end = N)
+
+speed <- speed - mean(speed)
+speed <- ts(speed, start = 1, end = N)
+
+temperature <- temperature - mean(temperature)
+temperature <- ts(temperature, start = 1, end = N)
+```
+
+```{r}
+# Function to plot each variable
+plot_variable <- function(data, variable_name) {
+  if(all(is.finite(data))) {
+    plot(data, xlab = "datapoints", ylab = variable_name, main = paste(variable_name, "Plot"))
+  } else {
+    cat("Variable", variable_name, "contains non-finite values and cannot be plotted.\n")
+  }
+}
+
+# List of variables
+variables <- list(
+  dst = dst,
+  bx_gse = bx_gse,
+  by_gse = by_gse,
+  bz_gse = bz_gse,
+  theta_gse = theta_gse,
+  phi_gse = phi_gse,
+  bx_gsm = bx_gsm,
+  by_gsm = by_gsm,
+  bz_gsm = bz_gsm,
+  theta_gsm = theta_gsm,
+  phi_gsm = phi_gsm,
+  bt = bt,
+  density = density,
+  speed = speed,
+  temperature = temperature
+)
+
+# Plotting each variable
+for (variable_name in names(variables)) {
+  plot_variable(variables[[variable_name]], variable_name)
+}
+
+```
+```{r}
+# Define a list of variables
+variables <- list(
+  dst = dst,
+  bx_gse = bx_gse,
+  by_gse = by_gse,
+  bz_gse = bz_gse,
+  theta_gse = theta_gse,
+  phi_gse = phi_gse,
+  bx_gsm = bx_gsm,
+  by_gsm = by_gsm,
+  bz_gsm = bz_gsm,
+  theta_gsm = theta_gsm,
+  phi_gsm = phi_gsm,
+  bt = bt,
+  density = density,
+  speed = speed,
+  temperature = temperature
+)
+
+# Apply acf function to each variable
+for (variable_name in names(variables)) {
+  acf(variables[[variable_name]], main = paste("ACF for", variable_name))
+}
+
+```
+
+```{r}
+diff_dst <- diff(dst)
+plot(diff_dst, xlab="days", ylab = "dst", main = "Differenced DST Plot")
+
+diff_bx_gse <- diff(bx_gse)
+plot(diff_bx_gse, xlab="days", ylab = "bx_gse", main = "Differenced bx_gse Plot")
+
+diff_by_gse <- diff(by_gse)
+plot(diff_by_gse, xlab="days", ylab = "by_gse", main = "Differenced by_gse Plot")
+
+diff_bz_gse <- diff(bz_gse)
+plot(diff_bz_gse, xlab="days", ylab = "bz_gse", main = "Differenced bz_gse Plot")
+
+diff_theta_gse <- diff(theta_gse)
+plot(diff_theta_gse, xlab="days", ylab = "theta_gse", main = "Differenced theta_gse Plot")
+
+diff_phi_gse <- diff(phi_gse)
+plot(diff_phi_gse, xlab="days", ylab = "phi_gse", main = "Differenced phi_gse Plot")
+
+diff_bx_gsm <- diff(bx_gsm)
+plot(diff_bx_gsm, xlab="days", ylab = "bx_gsm", main = "Differenced bx_gsm Plot")
+
+diff_by_gsm <- diff(by_gsm)
+plot(diff_by_gsm, xlab="days", ylab = "by_gsm", main = "Differenced by_gsm Plot")
+
+diff_bz_gsm <- diff(bz_gsm)
+plot(diff_bz_gsm, xlab="days", ylab = "bz_gsm", main = "Differenced bz_gsm Plot")
+
+diff_theta_gsm <- diff(theta_gsm)
+plot(diff_theta_gsm, xlab="days", ylab = "theta_gsm", main = "Differenced theta_gsm Plot")
+
+diff_phi_gsm <- diff(phi_gsm)
+plot(diff_phi_gsm, xlab="days", ylab = "phi_gsm", main = "Differenced phi_gsm Plot")
+
+diff_bt <- diff(bt)
+plot(diff_bt, xlab="days", ylab = "bt", main = "Differenced bt Plot")
+
+diff_speed <- diff(speed)
+plot(diff_speed, xlab="days", ylab = "speed", main = "Differenced speed Plot")
+
+diff_density <- diff(density)
+plot(diff_density, xlab="days", ylab = "density", main = "Differenced density Plot")
+
+diff_temperature <- diff(temperature)
+plot(diff_temperature, xlab="days", ylab = "temperature", main = "Differenced temperature Plot")
+```
+
+```{r}
+adf.test(diff_bt)
+adf.test(diff_bx_gse)
+adf.test(diff_bx_gsm)
+adf.test(diff_by_gse)
+adf.test(diff_by_gsm)
+adf.test(diff_bz_gse)
+adf.test(diff_bz_gsm)
+adf.test(diff_density)
+adf.test(diff_dst)
+adf.test(diff_phi_gse)
+adf.test(diff_phi_gsm)
+adf.test(diff_speed)
+adf.test(diff_temperature)
+adf.test(diff_theta_gse)
+adf.test(diff_theta_gsm)
+```
+
+```{r}
+acf(diff_bt)
+acf(diff_bx_gse)
+acf(diff_bx_gsm)
+acf(diff_by_gse)
+acf(diff_by_gsm)
+acf(diff_bz_gse)
+acf(diff_bz_gsm)
+acf(diff_density)
+acf(diff_dst)
+acf(diff_phi_gse)
+acf(diff_phi_gsm)
+acf(diff_speed)
+acf(diff_temperature)
+acf(diff_theta_gse)
+acf(diff_theta_gsm)
+```
+
+```{r}
+pacf(diff_bt)
+pacf(diff_bx_gse)
+pacf(diff_bx_gsm)
+pacf(diff_by_gse)
+pacf(diff_by_gsm)
+pacf(diff_bz_gse)
+pacf(diff_bz_gsm)
+pacf(diff_density)
+pacf(diff_dst)
+pacf(diff_phi_gse)
+pacf(diff_phi_gsm)
+pacf(diff_speed)
+pacf(diff_temperature)
+pacf(diff_theta_gse)
+pacf(diff_theta_gsm)
+```
+```{r}
+ccf(diff_dst, diff_bt)
+ccf(diff_dst, diff_bx_gse)
+ccf(diff_dst, diff_bx_gsm)
+ccf(diff_dst, diff_by_gse)
+ccf(diff_dst, diff_by_gsm)
+ccf(diff_dst, diff_bz_gse)
+ccf(diff_dst, diff_bz_gsm)
+ccf(diff_dst, diff_density)
+ccf(diff_dst, diff_phi_gse)
+ccf(diff_dst, diff_phi_gsm)
+ccf(diff_dst, diff_speed)
+ccf(diff_dst, diff_temperature)
+ccf(diff_dst, diff_theta_gse)
+ccf(diff_dst, diff_theta_gsm)
+```
+
+
+
+```{r}
+#Summarizing the Spectral Analysis of each series
+spectrum(diff_dst, log='no', xlab='Frequencies',ylab='Power',main='Periodogram DST')
+spectrum(diff_bt, log='no', xlab='Frequencies',ylab='Power',main='Periodogram BT')
+spectrum(diff_bx_gse, log='no', xlab='Frequencies',ylab='Power',main='Periodogram bx_gse')
+spectrum(diff_by_gse, log='no', xlab='Frequencies',ylab='Power',main='Periodogram by_gse')
+spectrum(diff_bz_gse, log='no', xlab='Frequencies',ylab='Power',main='Periodogram bz_gse')
+spectrum(diff_bx_gsm, log='no', xlab='Frequencies',ylab='Power',main='Periodogram bx_gsm')
+spectrum(diff_by_gsm, log='no', xlab='Frequencies',ylab='Power',main='Periodogram by_gsm')
+spectrum(diff_bz_gsm, log='no', xlab='Frequencies',ylab='Power',main='Periodogram bz_gsm')
+spectrum(diff_phi_gsm, log='no', xlab='Frequencies',ylab='Power',main='Periodogram phi_gsm')
+spectrum(diff_phi_gse, log='no', xlab='Frequencies',ylab='Power',main='Periodogram phi_gse')
+spectrum(diff_theta_gsm, log='no', xlab='Frequencies',ylab='Power',main='Periodogram theta_gsm')
+spectrum(diff_theta_gse, log='no', xlab='Frequencies',ylab='Power',main='Periodogram theta_gse')
+spectrum(diff_density, log='no', xlab='Frequencies',ylab='Power',main='Periodogram density')
+spectrum(diff_temperature, log='no', xlab='Frequencies',ylab='Power',main='Periodogram temperature')
+spectrum(diff_speed, log='no', xlab='Frequencies',ylab='Power',main='Periodogram speed')
+```
+```{r}
+dst_lag11 <- stats::filter(diff_dst, c(0,1), sides=1)
+dst_lag11
+```
+
+```{r}
+dst_lag1 <- stats::filter(diff_dst, c(0,1), sides=1)
+dst_lag2 <- stats::filter(dst_lag1, c(0,1), sides=1)
+dst_lag3 <- stats::filter(dst_lag2, c(0,1), sides=1)
+dst_lag4 <- stats::filter(dst_lag3, c(0,1), sides=1)
+
+bx_gse_lag1 <- stats::filter(diff_bx_gse, c(0, 1), sides = 1)
+bx_gse_lag2 <- stats::filter(bx_gse_lag1, c(0, 1), sides = 1)
+bx_gse_lag3 <- stats::filter(bx_gse_lag2, c(0, 1), sides = 1)
+bx_gse_lag4 <- stats::filter(bx_gse_lag3, c(0, 1), sides = 1)
+
+by_gse_lag1 <- stats::filter(diff_by_gse, c(0, 1), sides = 1)
+by_gse_lag2 <- stats::filter(by_gse_lag1, c(0, 1), sides = 1)
+by_gse_lag3 <- stats::filter(by_gse_lag2, c(0, 1), sides = 1)
+by_gse_lag4 <- stats::filter(by_gse_lag3, c(0, 1), sides = 1)
+
+bz_gse_lag1 <- stats::filter(diff_bz_gse, c(0, 1), sides = 1)
+bz_gse_lag2 <- stats::filter(bz_gse_lag1, c(0, 1), sides = 1)
+bz_gse_lag3 <- stats::filter(bz_gse_lag2, c(0, 1), sides = 1)
+bz_gse_lag4 <- stats::filter(bz_gse_lag3, c(0, 1), sides = 1)
+
+bx_gsm_lag1 <- stats::filter(diff_bx_gsm, c(0, 1), sides = 1)
+bx_gsm_lag2 <- stats::filter(bx_gsm_lag1, c(0, 1), sides = 1)
+bx_gsm_lag3 <- stats::filter(bx_gsm_lag2, c(0, 1), sides = 1)
+bx_gsm_lag4 <- stats::filter(bx_gsm_lag3, c(0, 1), sides = 1)
+
+by_gsm_lag1 <- stats::filter(diff_by_gsm, c(0, 1), sides = 1)
+by_gsm_lag2 <- stats::filter(by_gsm_lag1, c(0, 1), sides = 1)
+by_gsm_lag3 <- stats::filter(by_gsm_lag2, c(0, 1), sides = 1)
+by_gsm_lag4 <- stats::filter(by_gsm_lag3, c(0, 1), sides = 1)
+
+bz_gsm_lag1 <- stats::filter(diff_bz_gsm, c(0, 1), sides = 1)
+bz_gsm_lag2 <- stats::filter(bz_gsm_lag1, c(0, 1), sides = 1)
+bz_gsm_lag3 <- stats::filter(bz_gsm_lag2, c(0, 1), sides = 1)
+bz_gsm_lag4 <- stats::filter(bz_gsm_lag3, c(0, 1), sides = 1)
+
+theta_gse_lag1 <- stats::filter(diff_theta_gse, c(0, 1), sides = 1)
+theta_gse_lag2 <- stats::filter(theta_gse_lag1, c(0, 1), sides = 1)
+theta_gse_lag3 <- stats::filter(theta_gse_lag2, c(0, 1), sides = 1)
+theta_gse_lag4 <- stats::filter(theta_gse_lag3, c(0, 1), sides = 1)
+
+theta_gsm_lag1 <- stats::filter(diff_theta_gsm, c(0, 1), sides = 1)
+theta_gsm_lag2 <- stats::filter(theta_gsm_lag1, c(0, 1), sides = 1)
+theta_gsm_lag3 <- stats::filter(theta_gsm_lag2, c(0, 1), sides = 1)
+theta_gsm_lag4 <- stats::filter(theta_gsm_lag3, c(0, 1), sides = 1)
+
+phi_gse_lag1 <- stats::filter(diff_phi_gse, c(0, 1), sides = 1)
+phi_gse_lag2 <- stats::filter(phi_gse_lag1, c(0, 1), sides = 1)
+phi_gse_lag3 <- stats::filter(phi_gse_lag2, c(0, 1), sides = 1)
+phi_gse_lag4 <- stats::filter(phi_gse_lag3, c(0, 1), sides = 1)
+
+phi_gsm_lag1 <- stats::filter(diff_phi_gsm, c(0, 1), sides = 1)
+phi_gsm_lag2 <- stats::filter(phi_gsm_lag1, c(0, 1), sides = 1)
+phi_gsm_lag3 <- stats::filter(phi_gsm_lag2, c(0, 1), sides = 1)
+phi_gsm_lag4 <- stats::filter(phi_gsm_lag3, c(0, 1), sides = 1)
+
+density_lag1 <- stats::filter(diff_density, c(0, 1), sides = 1)
+density_lag2 <- stats::filter(density_lag1, c(0, 1), sides = 1)
+density_lag3 <- stats::filter(density_lag2, c(0, 1), sides = 1)
+density_lag4 <- stats::filter(density_lag3, c(0, 1), sides = 1)
+
+temperature_lag1 <- stats::filter(diff_temperature, c(0, 1), sides = 1)
+temperature_lag2 <- stats::filter(temperature_lag1, c(0, 1), sides = 1)
+temperature_lag3 <- stats::filter(temperature_lag2, c(0, 1), sides = 1)
+temperature_lag4 <- stats::filter(temperature_lag3, c(0, 1), sides = 1)
+
+bt_lag1 <- stats::filter(diff_bt, c(0, 1), sides = 1)
+bt_lag2 <- stats::filter(bt_lag1, c(0, 1), sides = 1)
+bt_lag3 <- stats::filter(bt_lag2, c(0, 1), sides = 1)
+bt_lag4 <- stats::filter(bt_lag3, c(0, 1), sides = 1)
+
+speed_lag1 <- stats::filter(diff_speed, c(0, 1), sides = 1)
+speed_lag2 <- stats::filter(speed_lag1, c(0, 1), sides = 1)
+speed_lag3 <- stats::filter(speed_lag2, c(0, 1), sides = 1)
+speed_lag4 <- stats::filter(speed_lag3, c(0, 1), sides = 1)
+```
+
+```{r}
+diff_dst <- diff_dst[5:N]
+dst_lag1 <- dst_lag1[5:N]
+dst_lag2 <- dst_lag2[5:N]
+dst_lag3 <- dst_lag3[5:N]
+dst_lag4 <- dst_lag4[5:N]
+
+diff_bx_gse <- diff_bx_gse[5:N]
+bx_gse_lag1 <- bx_gse_lag1[5:N]
+bx_gse_lag2 <- bx_gse_lag2[5:N]
+bx_gse_lag3 <- bx_gse_lag3[5:N]
+bx_gse_lag4 <- bx_gse_lag4[5:N]
+
+diff_by_gse <- diff_by_gse[5:N]
+by_gse_lag1 <- by_gse_lag1[5:N]
+by_gse_lag2 <- by_gse_lag2[5:N]
+by_gse_lag3 <- by_gse_lag3[5:N]
+by_gse_lag4 <- by_gse_lag4[5:N]
+
+diff_bz_gse <- diff_bz_gse[5:N]
+bz_gse_lag1 <- bz_gse_lag1[5:N]
+bz_gse_lag2 <- bz_gse_lag2[5:N]
+bz_gse_lag3 <- bz_gse_lag3[5:N]
+bz_gse_lag4 <- bz_gse_lag4[5:N]
+
+diff_bx_gsm <- diff_bx_gsm[5:N]
+bx_gsm_lag1 <- bx_gsm_lag1[5:N]
+bx_gsm_lag2 <- bx_gsm_lag2[5:N]
+bx_gsm_lag3 <- bx_gsm_lag3[5:N]
+bx_gsm_lag4 <- bx_gsm_lag4[5:N]
+
+diff_by_gsm <- diff_by_gsm[5:N]
+by_gsm_lag1 <- by_gsm_lag1[5:N]
+by_gsm_lag2 <- by_gsm_lag2[5:N]
+by_gsm_lag3 <- by_gsm_lag3[5:N]
+by_gsm_lag4 <- by_gsm_lag4[5:N]
+
+diff_bz_gsm <- diff_bz_gsm[5:N]
+bz_gsm_lag1 <- bz_gsm_lag1[5:N]
+bz_gsm_lag2 <- bz_gsm_lag2[5:N]
+bz_gsm_lag3 <- bz_gsm_lag3[5:N]
+bz_gsm_lag4 <- bz_gsm_lag4[5:N]
+
+diff_theta_gsm <- diff_theta_gsm[5:N]
+theta_gsm_lag1 <- theta_gsm_lag1[5:N]
+theta_gsm_lag2 <- theta_gsm_lag2[5:N]
+theta_gsm_lag3 <- theta_gsm_lag3[5:N]
+theta_gsm_lag4 <- theta_gsm_lag4[5:N]
+
+diff_theta_gse <- diff_theta_gse[5:N]
+theta_gse_lag1 <- theta_gse_lag1[5:N]
+theta_gse_lag2 <- theta_gse_lag2[5:N]
+theta_gse_lag3 <- theta_gse_lag3[5:N]
+theta_gse_lag4 <- theta_gse_lag4[5:N]
+
+diff_phi_gsm <- diff_phi_gsm[5:N]
+phi_gsm_lag1 <- phi_gsm_lag1[5:N]
+phi_gsm_lag2 <- phi_gsm_lag2[5:N]
+phi_gsm_lag3 <- phi_gsm_lag3[5:N]
+phi_gsm_lag4 <- phi_gsm_lag4[5:N]
+
+diff_phi_gse <- diff_phi_gse[5:N]
+phi_gse_lag1 <- phi_gse_lag1[5:N]
+phi_gse_lag2 <- phi_gse_lag2[5:N]
+phi_gse_lag3 <- phi_gse_lag3[5:N]
+phi_gse_lag4 <- phi_gse_lag4[5:N]
+
+diff_density <- diff_density[5:N]
+density_lag1 <- density_lag1[5:N]
+density_lag2 <- density_lag2[5:N]
+density_lag3 <- density_lag3[5:N]
+density_lag4 <- density_lag4[5:N]
+
+diff_temperature <- diff_temperature[5:N]
+temperature_lag1 <- temperature_lag1[5:N]
+temperature_lag2 <- temperature_lag2[5:N]
+temperature_lag3 <- temperature_lag3[5:N]
+temperature_lag4 <- temperature_lag4[5:N]
+
+diff_speed <- diff_speed[5:N]
+speed_lag1 <- speed_lag1[5:N]
+speed_lag2 <- speed_lag2[5:N]
+speed_lag3 <- speed_lag3[5:N]
+speed_lag4 <- speed_lag4[5:N]
+
+diff_bt <- diff_bt[5:N]
+bt_lag1 <- bt_lag1[5:N]
+bt_lag2 <- bt_lag2[5:N]
+bt_lag3 <- bt_lag3[5:N]
+bt_lag4 <- bt_lag4[5:N]
+```
+
+```{r}
+time_prd <- 1:N-5
+sin_pred <- sin(2 * pi * time_prd * (1/365))
+cos_pred <- cos(2 * pi * time_prd * (1/365))
+```
+
+```{r}
+data_arima4 <- cbind(
+                     dst_lag1, dst_lag2, dst_lag3, dst_lag4,
+                     bx_gse_lag1, bx_gse_lag2, bx_gse_lag3, bx_gse_lag4,
+                     by_gse_lag1, by_gse_lag2, by_gse_lag3, by_gse_lag4,
+                     bz_gse_lag1, bz_gse_lag2, bz_gse_lag3, bz_gse_lag4,
+                     bx_gsm_lag1, bx_gsm_lag2, bx_gsm_lag3, bx_gsm_lag4,
+                     by_gsm_lag1, by_gsm_lag2, by_gsm_lag3, by_gsm_lag4,
+                     bz_gsm_lag1, bz_gsm_lag2, bz_gsm_lag3, bz_gsm_lag4,
+                     theta_gse_lag1, theta_gse_lag2, theta_gse_lag3, theta_gse_lag4,
+                     theta_gsm_lag1, theta_gsm_lag2, theta_gsm_lag3, theta_gsm_lag4,
+                     #phi_gse_lag1, phi_gse_lag2, phi_gse_lag3, phi_gse_lag4,
+                     #phi_gsm_lag1, phi_gsm_lag2, phi_gsm_lag3, phi_gsm_lag4,
+                     density_lag1, density_lag2, density_lag3, density_lag4,
+                     temperature_lag1, temperature_lag2, temperature_lag3, temperature_lag4,
+                     speed_lag1, speed_lag2, speed_lag3, speed_lag4,
+                     bt_lag1, bt_lag2, bt_lag3, bt_lag4,
+                     sin_pred, cos_pred
+                     )
+
+data_arima3 <- cbind(dst_lag1, dst_lag2, dst_lag3, 
+                     bx_gse_lag1, bx_gse_lag2, bx_gse_lag3,
+                     by_gse_lag1, by_gse_lag2, by_gse_lag3, 
+                     bz_gse_lag1, bz_gse_lag2, bz_gse_lag3, 
+                     bx_gsm_lag1, bx_gsm_lag2, bx_gsm_lag3,
+                     by_gsm_lag1, by_gsm_lag2, by_gsm_lag3, 
+                     bz_gsm_lag1, bz_gsm_lag2, bz_gsm_lag3, 
+                     theta_gse_lag1, theta_gse_lag2, theta_gse_lag3, 
+                     theta_gsm_lag1, theta_gsm_lag2, theta_gsm_lag3, 
+                     #phi_gse_lag1, phi_gse_lag2, theta_gse_lag3, 
+                     #phi_gsm_lag1, phi_gsm_lag2, phi_gsm_lag3, 
+                     density_lag1, density_lag2, density_lag3, 
+                     temperature_lag1, temperature_lag2, temperature_lag3, 
+                     speed_lag1, speed_lag2, speed_lag3, 
+                     bt_lag1, bt_lag2, bt_lag3, 
+                     sin_pred, cos_pred)
+
+data_arima2 <- cbind(dst_lag1, dst_lag2, 
+                     bx_gse_lag1, bx_gse_lag2,
+                     by_gse_lag1, by_gse_lag2, 
+                     bz_gse_lag1, bz_gse_lag2,  
+                     bx_gsm_lag1, bx_gsm_lag2, 
+                     by_gsm_lag1, by_gsm_lag2, 
+                     bz_gsm_lag1, bz_gsm_lag2, 
+                     theta_gse_lag1, theta_gse_lag2,  
+                     theta_gsm_lag1, theta_gsm_lag2,
+                     #phi_gse_lag1, phi_gse_lag2,
+                     #phi_gsm_lag1, phi_gsm_lag2, 
+                     density_lag1, density_lag2, 
+                     temperature_lag1, temperature_lag2,  
+                     speed_lag1, speed_lag2, 
+                     bt_lag1, bt_lag2,
+                     sin_pred, cos_pred)
+
+data_arima1 <- cbind(dst_lag1,bx_gse_lag1,by_gse_lag1,bz_gse_lag1, 
+                     bx_gsm_lag1, by_gsm_lag1, bz_gsm_lag1,
+                     theta_gse_lag1,theta_gsm_lag1, 
+                     phi_gse_lag1, phi_gsm_lag1, 
+                     density_lag1, temperature_lag1, 
+                     speed_lag1,bt_lag1, 
+                     sin_pred, cos_pred)
+```
+
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag4 <- arima(diff_dst[0:700], xreg = data_arima4[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag4, newxreg = data_arima4[701:721,])
+    
+    ts.plot(diff_dst[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(complex_model_lag4), "BIC:", BIC(complex_model_lag4), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+```
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag3 <- arima(diff_dst[0:700], xreg = data_arima3[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag3, newxreg = data_arima3[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(complex_model_lag3), "BIC:", BIC(complex_model_lag3), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+```
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag2 <- arima(diff_dst[0:700], xreg = data_arima2[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag2, newxreg = data_arima2[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(average_model_lag1), "BIC:", BIC(average_model_lag1), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+```
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    average_model_lag1 <- arima(diff_dst[0:700], xreg = data_arima1[0:700,], order=c(i,0,j))
+    pr <- predict(average_model_lag1, newxreg = data_arima1[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(average_model_lag1), "BIC:", BIC(average_model_lag1), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+```
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    simple_model <- arima(diff_dst[0:700], order=c(i,0,j))
+    cat()
+    cat("AIC:", AIC(simple_model), "BIC:", BIC(simple_model), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+```
+
+```{r}
+complex_model_lag4 <- arima(diff_dst[0:700], xreg = data_arima4[0:700,], order=c(3,0,4))
+complex_model_lag3 <- arima(diff_dst[0:700], xreg = data_arima3[0:700,], order=c(3,0,5))
+complex_model_lag2 <- arima(diff_dst[0:700], xreg = data_arima2[0:700,], order=c(4,0,4))
+average_model_lag1 <- arima(diff_dst[0:700], xreg = data_arima1[0:700,], order=c(3,0,3))
+simple_model <- arima(diff_dst[0:700], order=c(5,0,4))
+```
+
+```{r}
+AIC(complex_model_lag4)
+BIC(complex_model_lag4)
+AIC(complex_model_lag3)
+BIC(complex_model_lag3)
+AIC(complex_model_lag2)
+BIC(complex_model_lag2)
+AIC(average_model_lag1)
+BIC(average_model_lag1)
+AIC(simple_model)
+BIC(simple_model)
+```
+
+```{r}
+complex_resids <- residuals(complex_model_lag2)
+Box.test(complex_resids,lag=5)
+```
+```{r}
+plot(complex_resids, ylab='Residuals',main='Residual plot for complex model 2')
+```
+```{r}
+acf(complex_resids, 10, main = "ACF of Complex Model 2 Residuals")
+
+# The spectral analysis shows random walk
+spectrum(complex_resids,log='no')
+```
+```{r}
+pr <- predict(complex_model_lag2, newxreg = data_arima2[701:721,])
+
+ts.plot(diff_dst[700:720], pr$pred, lty=1:2, col=c("blue", "red"),
+        ylab='Oil Temperature Difference', main='Actual Vs Predicted')
+legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2, cex = 0.7)
+
+print(complex_model_lag2)
+
+# Calculating model metrics
+errors <- diff_dst[700:720] - pr$pred
+mae <- mean(abs(errors))
+mse <- mean(errors^2)
+rmse <- sqrt(mse)
+
+cat("MAE:", round(mae, 2), "\n")
+cat("MSE:", round(mse, 2), "\n")
+cat("RMSE:", round(rmse, 2), "\n")
+
+test_ts <- ts(diff_dst[700:720], start = 1, end = 21)
+pred_ts <- ts(pr$pred, start = 1, end = 21)
+accuracy(pred_ts, test_ts)
+
+coeftest(complex_model_lag2)
+```
+
+```{r}
+data_arima4[0:700]
+```
+
+```{r}
+data_arima4[701:721,]
+```
+
+```{r}
+ mean(dst, na.rm = TRUE)
+```
+
+# ```{r}
+# # Group by 'period' and 'date', calculate mean for 'dst', and create a dataframe
+# dst_period_mean_df <- dst %>%
+#   group_by(period, date) %>%
+#   summarize(mean_dst = mean(dst, na.rm = TRUE)) %>%
+#   arrange(period, date)
+# # Print the dataframe
+# print(dst_period_mean_df)
+# ```
+
+```{r}
+library(ggplot2)
+
+# Convert 'date' column to Date type
+data$date <- as.Date(data$date)
+
+# Loop through each period
+for(period in unique(data$period)) {
+  # Subset the data for the current period
+  subset_df <- data[data$period == period, ]
+  
+  # Sort the subsetted data by date
+  subset_df <- subset_df[order(subset_df$date), ]
+  
+  # Create a plot for the current period
+  p <- ggplot(data = subset_df, aes(x = date, y = mean_dst)) +
+    geom_line() +
+    labs(title = paste("Period:", period),
+         x = "Day",
+         y = "Mean DST per day")
+  
+  # Print the plot
+  print(p)
+}
+
+```
+
+```{r}
+print(dst)
+```
+
+```{r}
+print(solar_wind)
+```
+
+```{r}
+# Group by 'period' and calculate summary statistics for 'dst'
+solar_wind_summary <- solar_wind %>%
+  group_by(period) %>%
+  summarize(
+    count = n(),
+    mean = mean(solar_wind, na.rm = TRUE),
+    sd = sd(solar_wind, na.rm = TRUE),
+    min = min(solar_wind, na.rm = TRUE),
+    q25 = quantile(solar_wind, 0.25, na.rm = TRUE),
+    median = median(solar_wind, na.rm = TRUE),
+    q75 = quantile(solar_wind, 0.75, na.rm = TRUE),
+    max = max(solar_wind, na.rm = TRUE)
+  )
+
+# Print the summary statistics
+print(solar_wind_summary)
+```
+
+```{r}
+solar_wind_ab = rbind(solar_wind_a,solar_wind_b)
+solar_wind = rbind(solar_wind_ab,solar_wind_c)
+```
+
+```{r}
+dim(solar_wind)
+dim(dst)
+```
